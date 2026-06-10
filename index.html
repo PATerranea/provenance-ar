@@ -4,11 +4,14 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no" />
   <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
+  <meta http-equiv="Pragma" content="no-cache" />
+  <meta http-equiv="Expires" content="0" />
   <title>ARTIS Conservation Note — AR</title>
+  <!-- v7 -->
   <style>
     *{margin:0;padding:0;box-sizing:border-box}
     html,body{width:100%;height:100%;overflow:hidden;background:#0a1628;font-family:-apple-system,BlinkMacSystemFont,'Helvetica Neue',sans-serif}
-
     #splash{position:fixed;inset:0;z-index:100;background:#0a1628;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:0;transition:opacity .5s}
     #splash.hidden{opacity:0;pointer-events:none}
     .splash-top{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:12px;padding:2rem 2rem 1rem}
@@ -25,15 +28,12 @@
     #start-btn{width:100%;max-width:320px;background:#1a73e8;color:#fff;border:none;border-radius:10px;padding:16px;font-size:15px;font-weight:600;cursor:pointer;-webkit-tap-highlight-color:transparent}
     #start-btn:active{opacity:.8}
     .privacy{font-size:11px;color:rgba(255,255,255,.2);text-align:center}
-
     #loading{position:fixed;inset:0;z-index:80;background:#0a1628;display:none;flex-direction:column;align-items:center;justify-content:center;gap:20px}
     #loading.show{display:flex}
     .ring{width:40px;height:40px;border-radius:50%;border:2px solid rgba(26,115,232,.2);border-top-color:#1a73e8;animation:spin .9s linear infinite}
     @keyframes spin{to{transform:rotate(360deg)}}
     #load-text{font-size:13px;color:rgba(255,255,255,.5);text-align:center;max-width:260px;line-height:1.6;padding:0 1rem}
-
     #ar-container{position:fixed;inset:0;z-index:2}
-
     #ui{position:fixed;inset:0;z-index:50;pointer-events:none;display:none}
     #ui.show{display:block}
     #frame{position:absolute;left:50%;top:42%;transform:translate(-50%,-50%);width:78vw;max-width:340px;aspect-ratio:1.75;transition:opacity .4s}
@@ -50,7 +50,6 @@
     .dot{width:7px;height:7px;border-radius:50%;background:#34a853;animation:pdot 1.5s ease-in-out infinite}
     @keyframes pdot{0%,100%{opacity:1}50%{opacity:.3}}
     .badge-text{font-size:12px;color:rgba(255,255,255,.8)}
-
     #err{position:fixed;inset:0;z-index:200;background:#0a1628;display:none;flex-direction:column;align-items:center;justify-content:center;gap:16px;padding:2rem;text-align:center}
     #err.show{display:flex}
     #err h2{color:#1a73e8;font-size:20px;font-weight:400}
@@ -60,7 +59,6 @@
   </style>
 </head>
 <body>
-
 <div id="splash">
   <div class="splash-top">
     <div class="splash-logo">ARTIS Amsterdam Royal Zoo</div>
@@ -68,28 +66,17 @@
     <div class="splash-sub">Volg de 3 stappen en zie de olifant verschijnen</div>
   </div>
   <div class="steps">
-    <div class="step">
-      <div class="step-num">1</div>
-      <div class="step-text"><strong>Houd je ARTIS Conservation Note klaar</strong><br>Leg hem op een vlakke ondergrond in goed licht</div>
-    </div>
-    <div class="step">
-      <div class="step-num">2</div>
-      <div class="step-text"><strong>Tik op de knop hieronder</strong><br>Geef cameratoestemming wanneer gevraagd</div>
-    </div>
-    <div class="step">
-      <div class="step-num">3</div>
-      <div class="step-text"><strong>Richt je camera op de note</strong><br>Houd hem volledig zichtbaar — de olifant verschijnt vanzelf</div>
-    </div>
+    <div class="step"><div class="step-num">1</div><div class="step-text"><strong>Houd je ARTIS Conservation Note klaar</strong><br>Leg hem op een vlakke ondergrond in goed licht</div></div>
+    <div class="step"><div class="step-num">2</div><div class="step-text"><strong>Tik op de knop hieronder</strong><br>Geef cameratoestemming wanneer gevraagd</div></div>
+    <div class="step"><div class="step-num">3</div><div class="step-text"><strong>Richt je camera op de note</strong><br>Houd hem volledig zichtbaar — de olifant verschijnt vanzelf</div></div>
   </div>
   <div class="splash-bottom">
     <button id="start-btn">📷&nbsp;&nbsp;Start AR-ervaring</button>
     <div class="privacy">Camera wordt alleen gebruikt voor beeldherkenning</div>
   </div>
 </div>
-
 <div id="loading"><div class="ring"></div><div id="load-text">Even geduld…</div></div>
 <div id="ar-container"></div>
-
 <div id="ui">
   <div id="frame">
     <svg viewBox="0 0 350 200" xmlns="http://www.w3.org/2000/svg">
@@ -106,7 +93,6 @@
   </div>
   <div id="badge"><div class="dot"></div><div class="badge-text">Note herkend — AR actief</div></div>
 </div>
-
 <div id="err">
   <h2 id="err-title">Er ging iets mis</h2>
   <p id="err-detail">Probeer opnieuw.</p>
@@ -114,209 +100,264 @@
   <button onclick="location.reload()">Opnieuw proberen</button>
 </div>
 
-<!-- Load Three.js as regular script FIRST -->
-<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r134/three.min.js"></script>
-
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r134/three.min.js?v=7"></script>
 <script>
-// Verify THREE loaded
-if (typeof THREE === 'undefined') {
-  document.getElementById('err-title').textContent = 'Laad fout';
-  document.getElementById('err-detail').textContent = 'Three.js kon niet worden geladen. Controleer je internetverbinding en probeer opnieuw.';
-  document.getElementById('err').classList.add('show');
-}
-
 var MIND_FILE = 'https://raw.githubusercontent.com/paterranea/provenance-ar/main/Artis.mind';
 
 function setLoad(t){ document.getElementById('load-text').textContent = t; }
-function showErr(title, detail, code){
-  document.getElementById('err-title').textContent = title;
-  document.getElementById('err-detail').textContent = detail;
-  document.getElementById('err-code').textContent = code || '';
+function showErr(title,detail,code){
+  document.getElementById('err-title').textContent=title;
+  document.getElementById('err-detail').textContent=detail;
+  document.getElementById('err-code').textContent=code||'';
   document.getElementById('err').classList.add('show');
   document.getElementById('loading').classList.remove('show');
 }
-
 function loadScript(src){
-  return new Promise(function(resolve, reject){
-    var s = document.createElement('script');
-    s.src = src;
-    s.onload = resolve;
-    s.onerror = function(){ reject(new Error('Laden mislukt: ' + src)); };
+  return new Promise(function(resolve,reject){
+    var s=document.createElement('script');
+    s.src=src; s.onload=resolve;
+    s.onerror=function(){ reject(new Error('Laden mislukt: '+src)); };
     document.head.appendChild(s);
   });
 }
 
-// Wire up button immediately — no module dependency
-document.getElementById('start-btn').onclick = function(){
-  startAR();
-};
+document.getElementById('start-btn').onclick = function(){ startAR(); };
 
 async function startAR(){
   document.getElementById('splash').classList.add('hidden');
   document.getElementById('loading').classList.add('show');
-
-  // Step 1: camera permission
   setLoad('Cameratoestemming vragen…');
   try {
-    var s = await navigator.mediaDevices.getUserMedia({ audio: false, video: { facingMode: { ideal: 'environment' } } });
-    s.getTracks().forEach(function(t){ t.stop(); });
+    var s=await navigator.mediaDevices.getUserMedia({audio:false,video:{facingMode:{ideal:'environment'}}});
+    s.getTracks().forEach(function(t){t.stop();});
   } catch(e){
-    showErr('Camera niet beschikbaar', 'Ga naar Instellingen → Safari → Camera → Toestaan, en laad de pagina opnieuw.', e.name + ': ' + e.message);
+    showErr('Camera niet beschikbaar','Ga naar Instellingen → Safari → Camera → Toestaan, en laad de pagina opnieuw.',e.name+': '+e.message);
     return;
   }
-
-  // Step 2: load MindAR (THREE already loaded above)
   setLoad('AR-engine laden…');
-  try {
-    await loadScript('https://cdn.jsdelivr.net/npm/mind-ar@1.2.5/dist/mindar-image-three.prod.js');
-  } catch(e){
-    // fallback
-    try {
-      await loadScript('https://unpkg.com/mind-ar@1.2.5/dist/mindar-image-three.prod.js');
-    } catch(e2){
-      showErr('AR-engine kon niet worden geladen', 'Controleer je internetverbinding en probeer opnieuw.', e2.message);
-      return;
-    }
+  try { await loadScript('https://cdn.jsdelivr.net/npm/mind-ar@1.2.5/dist/mindar-image-three.prod.js?v=7'); }
+  catch(e){
+    try { await loadScript('https://unpkg.com/mind-ar@1.2.5/dist/mindar-image-three.prod.js'); }
+    catch(e2){ showErr('AR-engine kon niet worden geladen','Controleer je internetverbinding.',e2.message); return; }
   }
-
-  // Step 3: check namespace — MindAR r134-compat bundle exports to window.MINDAR
-  await new Promise(function(r){ setTimeout(r, 300); });
-
-  if (!window.MINDAR || !window.MINDAR.IMAGE) {
-    // Try the legacy standalone bundle which always sets window.MINDAR
-    setLoad('Alternatieve AR-engine laden…');
-    try {
-      await loadScript('https://cdn.jsdelivr.net/npm/mind-ar@1.1.5/dist/mindar-image-three.prod.js');
-      await new Promise(function(r){ setTimeout(r, 300); });
-    } catch(e){}
+  await new Promise(function(r){setTimeout(r,300);});
+  if(!window.MINDAR||!window.MINDAR.IMAGE){
+    try { await loadScript('https://cdn.jsdelivr.net/npm/mind-ar@1.1.5/dist/mindar-image-three.prod.js'); }
+    catch(e){}
+    await new Promise(function(r){setTimeout(r,300);});
   }
-
-  if (!window.MINDAR || !window.MINDAR.IMAGE) {
-    showErr('AR niet beschikbaar', 'De AR-engine kon niet worden geïnitialiseerd op dit apparaat.', 'MINDAR.IMAGE undefined na laden van beide versies');
+  if(!window.MINDAR||!window.MINDAR.IMAGE){
+    showErr('AR niet beschikbaar','De AR-engine kon niet worden geïnitialiseerd.','MINDAR.IMAGE undefined');
     return;
   }
-
-  // Step 4: init
   setLoad('AR initialiseren…');
   var mar;
   try {
-    mar = new window.MINDAR.IMAGE.MindARThree({
-      container: document.getElementById('ar-container'),
-      imageTargetSrc: MIND_FILE,
-      maxTrack: 1,
-      uiLoading: 'no',
-      uiScanning: 'no',
-      uiError: 'no',
+    mar=new window.MINDAR.IMAGE.MindARThree({
+      container:document.getElementById('ar-container'),
+      imageTargetSrc:MIND_FILE,
+      maxTrack:1,uiLoading:'no',uiScanning:'no',uiError:'no'
     });
-  } catch(e){
-    showErr('AR init mislukt', 'Probeer de pagina opnieuw te laden.', e.message);
-    return;
-  }
+  } catch(e){ showErr('AR init mislukt','Probeer opnieuw.',e.message); return; }
 
-  var renderer = mar.renderer, scene = mar.scene, camera = mar.camera;
+  var renderer=mar.renderer, scene=mar.scene, camera=mar.camera;
 
-  scene.add(new THREE.AmbientLight(0xffffff, 0.85));
-  var sun = new THREE.DirectionalLight(0xffeebb, 1.4);
-  sun.position.set(1, 3, 2); scene.add(sun);
-  var fill = new THREE.DirectionalLight(0x99bbff, 0.5);
-  fill.position.set(-2, 1, -1); scene.add(fill);
+  // ── Gravure-stijl belichting: hard directional licht voor scherpe facetten ──
+  scene.add(new THREE.AmbientLight(0xd0e8ff, 0.4));
+  var key=new THREE.DirectionalLight(0xffffff, 2.0);
+  key.position.set(2,4,2); scene.add(key);
+  var rim=new THREE.DirectionalLight(0x1a4a8a, 0.8);
+  rim.position.set(-3,2,-2); scene.add(rim);
+  var under=new THREE.DirectionalLight(0x0a2040, 0.3);
+  under.position.set(0,-2,1); scene.add(under);
 
-  var anchor = mar.addAnchor(0);
-  anchor.group.add(buildElephant());
+  var anchor=mar.addAnchor(0);
+  anchor.group.add(buildGravureElephant());
 
-  anchor.onTargetFound = function(){
+  anchor.onTargetFound=function(){
     document.getElementById('frame').classList.add('found');
     document.getElementById('badge').classList.add('visible');
     document.getElementById('instruction').classList.add('hidden');
   };
-  anchor.onTargetLost = function(){
+  anchor.onTargetLost=function(){
     document.getElementById('frame').classList.remove('found');
     document.getElementById('badge').classList.remove('visible');
     document.getElementById('instruction').classList.remove('hidden');
   };
 
   setLoad('Camera koppelen…');
-  try {
-    await mar.start();
-  } catch(e){
-    showErr('Camera start mislukt', 'Probeer opnieuw na herladen van de pagina.', e.name + ': ' + e.message);
-    return;
-  }
+  try { await mar.start(); }
+  catch(e){ showErr('Camera start mislukt','Probeer opnieuw na herladen.',e.name+': '+e.message); return; }
 
   document.getElementById('loading').classList.remove('show');
   document.getElementById('ui').classList.add('show');
-  renderer.setAnimationLoop(function(){ renderer.render(scene, camera); });
+  renderer.setAnimationLoop(function(){ renderer.render(scene,camera); });
 }
 
-function buildElephant(){
-  var root = new THREE.Group();
-  function M(h){ return new THREE.MeshLambertMaterial({ color: h }); }
-  var grey=M(0x7a7a80), lgrey=M(0x9a9aa0), ivory=M(0xf0e8d0),
-      pink=M(0xd4948a), dark=M(0x1a1a1a), white=M(0xffffff);
+// ── Gravure-stijl olifant ─────────────────────────────────────────────────
+// Flat shading + blauwe inkttinten passend bij de ARTIS note
+function buildGravureElephant(){
+  var root=new THREE.Group();
+
+  // Kleurenpalet gebaseerd op de ARTIS note blauwtinten
+  function flatMat(hex, roughness){
+    return new THREE.MeshPhongMaterial({
+      color: hex,
+      flatShading: true,       // gravure-effect: harde facetten zichtbaar
+      shininess: roughness||8,
+      specular: 0x1a3a6a
+    });
+  }
+
+  var mBody  = flatMat(0x2a5a9a, 6);   // diepblauw — body
+  var mLight = flatMat(0x4a80c4, 10);  // middenblauw — lichtere vlakken
+  var mDark  = flatMat(0x1a3a6a, 4);   // donkerblauw — schaduwen
+  var mTusk  = flatMat(0xd4c890, 20);  // goudachtig ivoor — slagtanden
+  var mNail  = flatMat(0x3a6aaa, 6);   // nagels/details
 
   function mk(geo,mat,px,py,pz,rx,ry,rz,sx,sy,sz){
-    px=px||0; py=py||0; pz=pz||0; rx=rx||0; ry=ry||0; rz=rz||0;
-    var m = new THREE.Mesh(geo,mat);
+    px=px||0;py=py||0;pz=pz||0;rx=rx||0;ry=ry||0;rz=rz||0;
+    var m=new THREE.Mesh(geo,mat);
     m.position.set(px,py,pz);
     if(rx||ry||rz) m.rotation.set(rx,ry,rz);
     if(sx!=null) m.scale.set(sx,sy,sz);
     return m;
   }
 
-  var body = mk(new THREE.SphereGeometry(0.13,20,14),grey,0,0.13,0,0,0,0,1.45,1,1.15); root.add(body);
-  root.add(mk(new THREE.CylinderGeometry(0.07,0.09,0.1,12),grey,0.14,0.19,0,0,0,-0.45));
+  // ── Lichaam — angular, faceted ──
+  // Gebruik BoxGeometry voor de gravure-look i.p.v. bolvormen
+  var body=mk(new THREE.BoxGeometry(0.38,0.24,0.26,3,2,2), mBody, 0,0.14,0, 0,0.15,0);
+  root.add(body);
 
-  var head = new THREE.Group(); head.position.set(0.22,0.25,0); root.add(head);
-  head.add(mk(new THREE.SphereGeometry(0.09,16,12),grey));
-  head.add(mk(new THREE.SphereGeometry(0.055,12,10),grey,0.04,0.06,0));
+  // Buik iets ronder maken met extra mesh
+  root.add(mk(new THREE.BoxGeometry(0.28,0.18,0.22,2,2,2), mLight, 0.02,0.12,0, 0,0.1,0));
 
-  [-1,1].forEach(function(s){
-    head.add(mk(new THREE.SphereGeometry(0.013,8,8),dark,0.07,0.03,s*0.072));
-    head.add(mk(new THREE.SphereGeometry(0.004,6,6),white,0.075,0.036,s*0.076));
-    head.add(mk(new THREE.SphereGeometry(0.08,12,10),lgrey,-0.02,0.01,s*0.11,0,0,0,0.3,1,1));
-    head.add(mk(new THREE.SphereGeometry(0.055,10,8),pink,-0.015,0.01,s*0.115,0,0,0,0.18,0.72,0.72));
-    var tusk = mk(new THREE.CylinderGeometry(0.009,0.005,0.11,8),ivory,0.08,-0.06,s*0.05);
-    tusk.rotation.z = -Math.PI/2.2; head.add(tusk);
+  // ── Nek ──
+  root.add(mk(new THREE.BoxGeometry(0.12,0.14,0.14,2,2,2), mBody, 0.18,0.22,0, 0,0,-0.3));
+
+  // ── Hoofd ──
+  var head=new THREE.Group();
+  head.position.set(0.26,0.30,0);
+  root.add(head);
+
+  // Schedel — angular box
+  head.add(mk(new THREE.BoxGeometry(0.18,0.16,0.16,2,2,2), mBody));
+  // Voorhoofd bult
+  head.add(mk(new THREE.BoxGeometry(0.1,0.1,0.12,2,2,2), mLight, 0.06,0.06,0));
+
+  // Wangen
+  head.add(mk(new THREE.BoxGeometry(0.08,0.1,0.06,1,1,1), mDark, 0.02,0,-0.1, 0,0,0.1));
+  head.add(mk(new THREE.BoxGeometry(0.08,0.1,0.06,1,1,1), mDark, 0.02,0, 0.1, 0,0,-0.1));
+
+  // Ogen — kleine donkere vlakken
+  head.add(mk(new THREE.BoxGeometry(0.025,0.02,0.01,1,1,1), mDark, 0.07,0.04,-0.07));
+  head.add(mk(new THREE.BoxGeometry(0.025,0.02,0.01,1,1,1), mDark, 0.07,0.04, 0.07));
+  // Oogwit
+  head.add(mk(new THREE.BoxGeometry(0.012,0.01,0.008,1,1,1), new THREE.MeshPhongMaterial({color:0xe8f0ff,flatShading:true}), 0.074,0.044,-0.07));
+  head.add(mk(new THREE.BoxGeometry(0.012,0.01,0.008,1,1,1), new THREE.MeshPhongMaterial({color:0xe8f0ff,flatShading:true}), 0.074,0.044, 0.07));
+
+  // ── Oren — grote, platte, angular vlakken ──
+  // Linkeroor
+  var earL=new THREE.Group(); earL.position.set(-0.04,0.01,0.1); head.add(earL);
+  earL.add(mk(new THREE.BoxGeometry(0.04,0.16,0.14,1,2,2), mLight, 0,0,0, 0,0,0.15));
+  earL.add(mk(new THREE.BoxGeometry(0.03,0.12,0.1,1,2,2), mDark, -0.01,0,0.01, 0,0,0.1));
+  // Rechteroor
+  var earR=new THREE.Group(); earR.position.set(-0.04,0.01,-0.1); head.add(earR);
+  earR.add(mk(new THREE.BoxGeometry(0.04,0.16,0.14,1,2,2), mLight, 0,0,0, 0,0,-0.15));
+  earR.add(mk(new THREE.BoxGeometry(0.03,0.12,0.1,1,2,2), mDark, -0.01,0,-0.01, 0,0,-0.1));
+
+  // ── Slurf — gesegmenteerde boxen, gebogen ──
+  var trunk=new THREE.Group(); trunk.position.set(0.1,-0.06,0); head.add(trunk);
+  // 4 segmenten die naar beneden buigen
+  var segs=[
+    {y:-0.04, rz:0,    w:0.055, h:0.08},
+    {y:-0.12, rz:0.15, w:0.048, h:0.08},
+    {y:-0.20, rz:0.35, w:0.040, h:0.08},
+    {y:-0.27, rz:0.5,  w:0.032, h:0.07},
+  ];
+  segs.forEach(function(s,i){
+    var seg=mk(new THREE.BoxGeometry(s.w,s.h,s.w,1,1,1), i%2===0?mBody:mLight, 0,s.y,0, 0,0,s.rz);
+    trunk.add(seg);
+  });
+  // Slurftip
+  trunk.add(mk(new THREE.BoxGeometry(0.028,0.035,0.028,1,1,1), mDark, 0,-0.31,0, 0,0,0.6));
+
+  // ── Slagtanden ──
+  var tuskL=new THREE.Group(); tuskL.position.set(0.08,-0.07,-0.05); head.add(tuskL);
+  tuskL.add(mk(new THREE.BoxGeometry(0.018,0.12,0.018,1,1,1), mTusk, 0,0,0, 0,0,-Math.PI/2.5));
+  tuskL.add(mk(new THREE.BoxGeometry(0.014,0.06,0.014,1,1,1), mTusk, 0.04,-0.02,0, 0,0,-Math.PI/2));
+
+  var tuskR=new THREE.Group(); tuskR.position.set(0.08,-0.07, 0.05); head.add(tuskR);
+  tuskR.add(mk(new THREE.BoxGeometry(0.018,0.12,0.018,1,1,1), mTusk, 0,0,0, 0,0,-Math.PI/2.5));
+  tuskR.add(mk(new THREE.BoxGeometry(0.014,0.06,0.014,1,1,1), mTusk, 0.04,-0.02,0, 0,0,-Math.PI/2));
+
+  // ── Poten — robuuste rechthoekige blokken ──
+  var legs=[];
+  var legPos=[[-0.1,0.04,-0.09],[-0.1,0.04,0.09],[0.1,0.04,-0.09],[0.1,0.04,0.09]];
+  legPos.forEach(function(p){
+    var lg=new THREE.Group(); lg.position.set(p[0],p[1],p[2]); root.add(lg); legs.push(lg);
+    // Bovenste been
+    lg.add(mk(new THREE.BoxGeometry(0.08,0.14,0.08,1,2,1), mBody, 0,0.02,0));
+    // Onderbeen iets smaller
+    lg.add(mk(new THREE.BoxGeometry(0.07,0.08,0.07,1,1,1), mLight, 0,-0.08,0));
+    // Voet/nagels
+    lg.add(mk(new THREE.BoxGeometry(0.09,0.03,0.10,1,1,1), mDark, 0,-0.12,0));
+    // Nagelaanduidingen
+    [-1,0,1].forEach(function(n){
+      lg.add(mk(new THREE.BoxGeometry(0.018,0.015,0.01,1,1,1), mNail, 0.02,-0.13,n*0.025));
+    });
   });
 
-  var trunk = new THREE.Group(); trunk.position.set(0.1,-0.05,0); head.add(trunk);
-  trunk.add(mk(new THREE.CylinderGeometry(0.028,0.024,0.10,10),grey,0,-0.05,0));
-  trunk.add(mk(new THREE.CylinderGeometry(0.022,0.018,0.09,10),grey,0,-0.14,0));
-  trunk.add(mk(new THREE.CylinderGeometry(0.016,0.012,0.07,10),grey,0,-0.215,0));
-  trunk.add(mk(new THREE.SphereGeometry(0.015,8,8),grey,0,-0.26,0));
+  // ── Staart ──
+  var tail=new THREE.Group(); tail.position.set(-0.18,0.18,0); root.add(tail);
+  tail.add(mk(new THREE.BoxGeometry(0.02,0.1,0.02,1,2,1), mBody, 0,0,0, 0,0,Math.PI/4));
+  tail.add(mk(new THREE.BoxGeometry(0.012,0.06,0.012,1,1,1), mDark, 0.04,-0.04,0, 0,0,Math.PI/3));
 
-  var legs = [];
-  [[-0.08,0.04,-0.08],[-0.08,0.04,0.08],[0.08,0.04,-0.08],[0.08,0.04,0.08]].forEach(function(p){
-    var lg = new THREE.Group(); lg.position.set(p[0],p[1],p[2]);
-    lg.add(mk(new THREE.CylinderGeometry(0.032,0.026,0.11,10),grey));
-    lg.add(mk(new THREE.SphereGeometry(0.032,8,6),grey,0,-0.055,0,0,0,0,1,0.5,1.2));
-    root.add(lg); legs.push(lg);
-  });
+  // ── Rugwelving — extra box bovenop lichaam ──
+  root.add(mk(new THREE.BoxGeometry(0.22,0.06,0.18,2,1,2), mLight, 0.02,0.26,0, 0,0.1,0));
 
-  var tail = mk(new THREE.CylinderGeometry(0.008,0.004,0.09,6),grey,-0.14,0.2,0);
-  tail.rotation.z = Math.PI/3.5; root.add(tail);
+  // ── Animatie — subtiel, waardig — ──
+  var t=0;
+  var hx=head.position.x, hy=head.position.y;
+  var trunkBase=trunk.rotation.z;
+  var tailBase=0;
 
-  var t=0, hx=head.position.x, hy=head.position.y, tz=tail.rotation.z;
   (function tick(){
-    t+=0.016;
-    body.scale.y=1+Math.sin(t*0.9)*0.025;
-    body.position.y=0.13+Math.sin(t*0.9)*0.004;
-    head.position.x=hx+Math.sin(t*0.4)*0.008;
-    head.position.y=hy+Math.sin(t*0.9)*0.006;
-    head.rotation.y=Math.sin(t*0.35)*0.12;
-    trunk.rotation.x=Math.sin(t*0.7)*0.28;
-    trunk.rotation.z=Math.sin(t*0.5)*0.15;
-    tail.rotation.z=tz+Math.sin(t*1.1)*0.2;
-    legs[0].rotation.x= Math.sin(t*0.6)*0.08;
-    legs[1].rotation.x=-Math.sin(t*0.6)*0.08;
-    legs[2].rotation.x=-Math.sin(t*0.6)*0.08;
-    legs[3].rotation.x= Math.sin(t*0.6)*0.08;
+    t+=0.012; // iets langzamer voor waardigheid
+
+    // Rustgevende ademhaling
+    body.scale.y=1+Math.sin(t*0.7)*0.018;
+    body.position.y=0.14+Math.sin(t*0.7)*0.003;
+
+    // Hoofd lichte knik
+    head.position.y=hy+Math.sin(t*0.5)*0.005;
+    head.rotation.y=Math.sin(t*0.28)*0.08;
+    head.rotation.z=Math.sin(t*0.4)*0.03;
+
+    // Oren waaieren licht
+    earL.rotation.z=Math.sin(t*0.6)*0.06;
+    earR.rotation.z=-Math.sin(t*0.6)*0.06;
+
+    // Slurf beweegt kalm
+    trunk.rotation.x=Math.sin(t*0.55)*0.22;
+    trunk.rotation.z=Math.sin(t*0.4)*0.1;
+
+    // Staart
+    tail.rotation.z=tailBase+Math.sin(t*0.9)*0.18;
+
+    // Gewichtsverschuiving poten
+    legs[0].rotation.x= Math.sin(t*0.5)*0.05;
+    legs[1].rotation.x=-Math.sin(t*0.5)*0.05;
+    legs[2].rotation.x=-Math.sin(t*0.5)*0.05;
+    legs[3].rotation.x= Math.sin(t*0.5)*0.05;
+
     requestAnimationFrame(tick);
   })();
 
-  root.scale.setScalar(0.55);
-  root.position.set(0,0.18,0.1);
-  root.rotation.y=Math.PI*0.1;
+  // Positie op het biljet
+  root.scale.setScalar(0.58);
+  root.position.set(0, 0.22, 0.05);
+  root.rotation.y=Math.PI*0.08;
   return root;
 }
 </script>
