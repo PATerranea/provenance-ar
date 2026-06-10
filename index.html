@@ -3,42 +3,50 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
   <title>Provenance Studio — AR Experience</title>
   <style>
     * { margin: 0; padding: 0; box-sizing: border-box; }
     html, body { width: 100%; height: 100%; overflow: hidden; background: #0d0d0d; font-family: -apple-system, BlinkMacSystemFont, 'Helvetica Neue', sans-serif; }
 
-    #splash {
-      position: fixed; inset: 0; z-index: 100; background: #0d0d0d;
-      display: flex; flex-direction: column; align-items: center; justify-content: center;
-      gap: 28px; padding: 2rem; transition: opacity 0.6s ease;
-    }
+    #splash { position: fixed; inset: 0; z-index: 100; background: #0d0d0d; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 28px; padding: 2rem; transition: opacity 0.5s; }
     #splash.hidden { opacity: 0; pointer-events: none; }
     .splash-logo { font-size: 10px; letter-spacing: 3px; text-transform: uppercase; color: rgba(212,168,32,0.6); }
-    .splash-title { font-size: 26px; font-weight: 300; color: #fff; text-align: center; line-height: 1.3; }
+    .splash-title { font-size: 26px; font-weight: 300; color: #fff; text-align: center; line-height: 1.35; }
     .splash-title em { font-style: normal; color: #d4a820; }
     .splash-desc { font-size: 13px; color: rgba(255,255,255,0.4); text-align: center; line-height: 1.7; max-width: 280px; }
-    .splash-btn { background: #d4a820; color: #0d0d0d; border: none; border-radius: 6px; padding: 14px 36px; font-size: 14px; font-weight: 600; cursor: pointer; }
+    .splash-btn { background: #d4a820; color: #0d0d0d; border: none; border-radius: 6px; padding: 14px 36px; font-size: 14px; font-weight: 600; cursor: pointer; -webkit-tap-highlight-color: transparent; }
     .splash-note { font-size: 11px; color: rgba(255,255,255,0.2); text-align: center; max-width: 260px; line-height: 1.6; }
 
     #loading { position: fixed; inset: 0; z-index: 80; background: #000; display: none; flex-direction: column; align-items: center; justify-content: center; gap: 16px; }
     #loading.show { display: flex; }
-    .loading-ring { width: 36px; height: 36px; border-radius: 50%; border: 2px solid rgba(212,168,32,0.2); border-top-color: #d4a820; animation: spin 0.9s linear infinite; }
+    .loading-ring { width: 36px; height: 36px; border-radius: 50%; border: 2px solid rgba(212,168,32,0.15); border-top-color: #d4a820; animation: spin 0.9s linear infinite; }
     @keyframes spin { to { transform: rotate(360deg); } }
-    .loading-text { font-size: 12px; color: rgba(255,255,255,0.35); letter-spacing: 1px; }
+    .loading-text { font-size: 12px; color: rgba(255,255,255,0.35); letter-spacing: 0.8px; text-align: center; max-width: 260px; line-height: 1.6; }
 
-    #ar-container { position: fixed; inset: 0; }
+    /* Camera video — iOS needs this visible and playing BEFORE WebGL touches it */
+    #cam-video {
+      position: fixed; inset: 0; width: 100%; height: 100%;
+      object-fit: cover;
+      display: none;
+      z-index: 1;
+    }
+    #cam-video.show { display: block; }
+
+    #ar-canvas {
+      position: fixed; inset: 0; width: 100%; height: 100%;
+      z-index: 2;
+      display: none;
+    }
+    #ar-canvas.show { display: block; }
+
+    #ar-container { position: fixed; inset: 0; z-index: 2; display: none; }
+    #ar-container.show { display: block; }
 
     #ui-overlay { position: fixed; inset: 0; z-index: 50; pointer-events: none; display: none; }
     #ui-overlay.show { display: block; }
 
-    #aim-ring {
-      position: absolute; left: 50%; top: 50%;
-      transform: translate(-50%, -50%);
-      width: 220px; height: 110px;
-      border: 1.5px solid rgba(212,168,32,0.45); border-radius: 3px;
-      transition: opacity 0.4s;
-    }
+    #aim-ring { position: absolute; left: 50%; top: 50%; transform: translate(-50%,-50%); width: 220px; height: 110px; border: 1.5px solid rgba(212,168,32,0.5); border-radius: 3px; transition: opacity 0.4s; }
     #aim-ring.found { opacity: 0; }
     .corner { position: absolute; width: 14px; height: 14px; border-color: #d4a820; border-style: solid; }
     .c-tl { top:-1px; left:-1px; border-width: 2px 0 0 2px; }
@@ -46,22 +54,10 @@
     .c-bl { bottom:-1px; left:-1px; border-width: 0 0 2px 2px; }
     .c-br { bottom:-1px; right:-1px; border-width: 0 2px 2px 0; }
 
-    #hint {
-      position: absolute; bottom: 52px; left: 50%; transform: translateX(-50%);
-      background: rgba(0,0,0,0.6); border: 0.5px solid rgba(212,168,32,0.25);
-      border-radius: 20px; padding: 8px 20px;
-      font-size: 12px; color: rgba(255,255,255,0.6); white-space: nowrap;
-      transition: opacity 0.4s;
-    }
+    #hint { position: absolute; bottom: 52px; left: 50%; transform: translateX(-50%); background: rgba(0,0,0,0.6); border: 0.5px solid rgba(212,168,32,0.25); border-radius: 20px; padding: 8px 20px; font-size: 12px; color: rgba(255,255,255,0.6); white-space: nowrap; transition: opacity 0.4s; }
     #hint.hidden { opacity: 0; }
 
-    #badge {
-      position: absolute; top: 32px; left: 50%; transform: translateX(-50%);
-      display: flex; align-items: center; gap: 8px;
-      background: rgba(0,0,0,0.55); border: 0.5px solid rgba(212,168,32,0.3);
-      border-radius: 20px; padding: 6px 16px 6px 10px;
-      opacity: 0; transition: opacity 0.5s;
-    }
+    #badge { position: absolute; top: 32px; left: 50%; transform: translateX(-50%); display: flex; align-items: center; gap: 8px; background: rgba(0,0,0,0.55); border: 0.5px solid rgba(212,168,32,0.3); border-radius: 20px; padding: 6px 16px 6px 10px; opacity: 0; transition: opacity 0.5s; }
     #badge.visible { opacity: 1; }
     .badge-dot { width: 6px; height: 6px; border-radius: 50%; background: #4caf50; animation: pdot 1.5s ease-in-out infinite; }
     @keyframes pdot { 0%,100%{ opacity:1; } 50%{ opacity:0.3; } }
@@ -71,7 +67,7 @@
     #error-msg.show { display: flex; }
     #error-msg h2 { color: #d4a820; font-size: 18px; font-weight: 400; }
     #error-msg p { color: rgba(255,255,255,0.45); font-size: 13px; line-height: 1.7; max-width: 300px; }
-    #error-msg code { background: rgba(255,255,255,0.08); padding: 2px 6px; border-radius: 3px; font-size: 11px; color: rgba(255,255,255,0.5); }
+    #error-msg .err-code { font-size: 10px; color: rgba(255,255,255,0.2); margin-top: 4px; word-break: break-all; max-width: 300px; }
     #error-msg button { background: transparent; border: 0.5px solid rgba(212,168,32,0.4); color: #d4a820; border-radius: 6px; padding: 10px 24px; font-size: 13px; cursor: pointer; margin-top: 8px; }
   </style>
 </head>
@@ -81,280 +77,299 @@
   <div class="splash-logo">Provenance Studio</div>
   <div class="splash-title">Breng de<br><em>Signature Serie</em><br>tot leven</div>
   <div class="splash-desc">Richt je camera op de note — een levende olifant verschijnt op het biljet.</div>
-  <button class="splash-btn" onclick="startAR()">Start AR-ervaring</button>
-  <div class="splash-note">Camera wordt gebruikt voor beeldherkenning. Er wordt niets opgeslagen of verstuurd.</div>
+  <button class="splash-btn" id="start-btn">Start AR-ervaring</button>
+  <div class="splash-note">Camera wordt gebruikt voor beeldherkenning. Er wordt niets opgeslagen.</div>
 </div>
 
 <div id="loading">
   <div class="loading-ring"></div>
-  <div class="loading-text" id="load-text">Camera starten…</div>
+  <div class="loading-text" id="load-text">Even geduld…</div>
 </div>
+
+<!-- Video element used by MindAR — must exist in DOM before MindAR init on iOS -->
+<video id="cam-video" autoplay playsinline muted></video>
 
 <div id="ar-container"></div>
 
 <div id="ui-overlay">
   <div id="aim-ring">
-    <div class="corner c-tl"></div>
-    <div class="corner c-tr"></div>
-    <div class="corner c-bl"></div>
-    <div class="corner c-br"></div>
+    <div class="corner c-tl"></div><div class="corner c-tr"></div>
+    <div class="corner c-bl"></div><div class="corner c-br"></div>
   </div>
-  <div id="badge">
-    <div class="badge-dot"></div>
-    <div class="badge-text">Note herkend — AR actief</div>
-  </div>
+  <div id="badge"><div class="badge-dot"></div><div class="badge-text">Note herkend — AR actief</div></div>
   <div id="hint">Richt camera op de Signature Serie note</div>
 </div>
 
 <div id="error-msg">
-  <h2>Fout</h2>
-  <p id="error-detail">Er is iets misgegaan.</p>
+  <h2 id="err-title">Fout</h2>
+  <p id="err-detail">Er is iets misgegaan.</p>
+  <div class="err-code" id="err-code"></div>
   <button onclick="location.reload()">Opnieuw proberen</button>
 </div>
 
 <script>
-function setLoadText(t) { document.getElementById('load-text').textContent = t; }
+  function setLoad(t) { document.getElementById('load-text').textContent = t; }
 
-function showError(msg, detail) {
-  document.getElementById('error-msg').querySelector('h2').textContent = msg;
-  document.getElementById('error-detail').textContent = detail;
-  document.getElementById('error-msg').classList.add('show');
-  document.getElementById('loading').classList.remove('show');
-}
-
-function loadScript(src) {
-  return new Promise((resolve, reject) => {
-    const s = document.createElement('script');
-    s.src = src;
-    s.crossOrigin = 'anonymous';
-    s.onload = resolve;
-    s.onerror = () => reject(new Error('Script laden mislukt: ' + src));
-    document.head.appendChild(s);
-  });
-}
-
-async function startAR() {
-  document.getElementById('splash').classList.add('hidden');
-  document.getElementById('loading').classList.add('show');
-
-  // 1. Camera permission check
-  try {
-    setLoadText('Cameratoestemming vragen…');
-    const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } });
-    stream.getTracks().forEach(t => t.stop());
-  } catch(e) {
-    showError('Geen cameratoestemming', 'Geef toegang tot de camera in je browserinstellingen en probeer opnieuw. Zorg dat de pagina via HTTPS is geopend.');
-    return;
+  function showError(title, detail, code) {
+    document.getElementById('err-title').textContent = title;
+    document.getElementById('err-detail').textContent = detail;
+    document.getElementById('err-code').textContent = code || '';
+    document.getElementById('error-msg').classList.add('show');
+    document.getElementById('loading').classList.remove('show');
+    document.getElementById('splash').classList.remove('hidden');
+    document.getElementById('splash').style.opacity = '0';
   }
 
-  // 2. Load Three.js
-  try {
-    setLoadText('3D-bibliotheek laden…');
-    await loadScript('https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js');
-  } catch(e) {
-    showError('Laden mislukt', 'Three.js kon niet worden geladen. Controleer je internetverbinding.');
-    return;
-  }
-
-  // 3. Load MindAR
-  try {
-    setLoadText('AR-engine laden…');
-    await loadScript('https://cdn.jsdelivr.net/npm/mind-ar@1.2.5/dist/mindar-image-three.prod.js');
-  } catch(e) {
-    showError('Laden mislukt', 'MindAR kon niet worden geladen. Controleer je internetverbinding.');
-    return;
-  }
-
-  // 4. Init AR
-  await initAR();
-}
-
-async function initAR() {
-  setLoadText('AR initialiseren…');
-
-  let mindarThree;
-  try {
-    mindarThree = new window.MINDAR.IMAGE.MindARThree({
-      container: document.getElementById('ar-container'),
-      // Public demo target from MindAR's own CDN — card image tracker
-      imageTargetSrc: 'https://cdn.jsdelivr.net/npm/mind-ar@1.2.5/dist/examples/image-tracking/assets/card-example/cards.mind',
-      maxTrack: 1,
-      uiLoading: 'no',
-      uiScanning: 'no',
-      uiError: 'no',
+  function loadScript(src) {
+    return new Promise((resolve, reject) => {
+      if (document.querySelector('script[src="' + src + '"]')) { resolve(); return; }
+      const s = document.createElement('script');
+      s.src = src; s.crossOrigin = 'anonymous';
+      s.onload = resolve;
+      s.onerror = () => reject(new Error('Laden mislukt: ' + src));
+      document.head.appendChild(s);
     });
-  } catch(e) {
-    showError('AR init mislukt', e.message);
-    return;
   }
 
-  const { renderer, scene, camera } = mindarThree;
+  document.getElementById('start-btn').addEventListener('click', async () => {
+    document.getElementById('splash').classList.add('hidden');
+    document.getElementById('loading').classList.add('show');
 
-  // Lighting
-  scene.add(new THREE.AmbientLight(0xffffff, 0.75));
-  const sun = new THREE.DirectionalLight(0xffe8a0, 1.3);
-  sun.position.set(2, 4, 3);
-  scene.add(sun);
-  const fill = new THREE.DirectionalLight(0x8899cc, 0.4);
-  fill.position.set(-3, 1, -2);
-  scene.add(fill);
+    // ── Step 1: Camera permission — iOS requires user gesture ──
+    setLoad('Cameratoestemming vragen…');
+    let stream;
+    try {
+      stream = await navigator.mediaDevices.getUserMedia({
+        audio: false,
+        video: {
+          facingMode: { ideal: 'environment' },
+          width: { ideal: 1280 },
+          height: { ideal: 720 }
+        }
+      });
+    } catch(e) {
+      showError('Camera niet beschikbaar', 'Geef cameratoestemming in Safari: Instellingen → Safari → Camera → Toestaan.', e.name + ': ' + e.message);
+      return;
+    }
 
-  // Build procedural elephant (no external model dependency)
-  const anchor = mindarThree.addAnchor(0);
-  const elephant = buildElephant();
-  anchor.group.add(elephant);
+    // ── Step 2: Attach stream to video element (iOS needs this) ──
+    const video = document.getElementById('cam-video');
+    video.srcObject = stream;
+    video.classList.add('show');
+    try {
+      await video.play();
+    } catch(e) {
+      // Non-fatal on some browsers — continue
+    }
 
-  // Target events
-  anchor.onTargetFound = () => {
-    document.getElementById('aim-ring').classList.add('found');
-    document.getElementById('badge').classList.add('visible');
-    document.getElementById('hint').classList.add('hidden');
-  };
-  anchor.onTargetLost = () => {
-    document.getElementById('aim-ring').classList.remove('found');
-    document.getElementById('badge').classList.remove('visible');
-    document.getElementById('hint').classList.remove('hidden');
-  };
+    // ── Step 3: Load Three.js ──
+    setLoad('3D-engine laden…');
+    try {
+      await loadScript('https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js');
+    } catch(e) {
+      showError('Laden mislukt', 'Three.js kon niet worden geladen. Controleer je internetverbinding.', e.message);
+      return;
+    }
 
-  // Start
-  try {
-    setLoadText('Camera koppelen…');
-    await mindarThree.start();
-  } catch(e) {
-    showError('Camera start mislukt', 'Fout: ' + e.message + '. Probeer de pagina opnieuw te laden en geef cameratoestemming.');
-    return;
+    // ── Step 4: Load MindAR ──
+    setLoad('AR-engine laden…');
+    try {
+      await loadScript('https://cdn.jsdelivr.net/npm/mind-ar@1.2.5/dist/mindar-image-three.prod.js');
+    } catch(e) {
+      showError('Laden mislukt', 'AR-bibliotheek kon niet worden geladen.', e.message);
+      return;
+    }
+
+    // ── Step 5: Stop our test stream — MindAR opens its own ──
+    stream.getTracks().forEach(t => t.stop());
+    video.classList.remove('show');
+    video.srcObject = null;
+
+    // ── Step 6: Init AR ──
+    setLoad('AR starten…');
+    await initAR();
+  });
+
+  async function initAR() {
+    let mindarThree;
+    try {
+      mindarThree = new window.MINDAR.IMAGE.MindARThree({
+        container: document.getElementById('ar-container'),
+        imageTargetSrc: 'https://cdn.jsdelivr.net/npm/mind-ar@1.2.5/dist/examples/image-tracking/assets/card-example/cards.mind',
+        maxTrack: 1,
+        uiLoading: 'no',
+        uiScanning: 'no',
+        uiError: 'no',
+        filterMinCF: 0.001,
+        filterBeta: 1000,
+        warmupTolerance: 5,
+        missTolerance: 5,
+      });
+    } catch(e) {
+      showError('AR init mislukt', 'MindAR kon niet worden gestart.', e.message);
+      return;
+    }
+
+    const { renderer, scene, camera } = mindarThree;
+
+    // Lighting
+    scene.add(new THREE.AmbientLight(0xffffff, 0.8));
+    const sun = new THREE.DirectionalLight(0xffe8a0, 1.3);
+    sun.position.set(2, 4, 3);
+    scene.add(sun);
+    scene.add(Object.assign(new THREE.DirectionalLight(0x8899cc, 0.4), { position: new THREE.Vector3(-3,1,-2) }));
+
+    const anchor = mindarThree.addAnchor(0);
+    anchor.group.add(buildElephant());
+
+    anchor.onTargetFound = () => {
+      document.getElementById('aim-ring').classList.add('found');
+      document.getElementById('badge').classList.add('visible');
+      document.getElementById('hint').classList.add('hidden');
+    };
+    anchor.onTargetLost = () => {
+      document.getElementById('aim-ring').classList.remove('found');
+      document.getElementById('badge').classList.remove('visible');
+      document.getElementById('hint').classList.remove('hidden');
+    };
+
+    try {
+      setLoad('Camera koppelen…');
+      await mindarThree.start();
+    } catch(e) {
+      showError('Start mislukt', 'Camera kon niet worden gekoppeld aan AR. Probeer opnieuw.', e.name + ': ' + e.message);
+      return;
+    }
+
+    document.getElementById('loading').classList.remove('show');
+    document.getElementById('ar-container').classList.add('show');
+    document.getElementById('ui-overlay').classList.add('show');
+
+    const clock = new THREE.Clock();
+    renderer.setAnimationLoop(() => {
+      clock.getDelta();
+      renderer.render(scene, camera);
+    });
   }
 
-  document.getElementById('loading').classList.remove('show');
-  document.getElementById('ui-overlay').classList.add('show');
+  // ── Procedural elephant ───────────────────────────────────────────────────
+  function buildElephant() {
+    const root = new THREE.Group();
+    const grey  = new THREE.MeshLambertMaterial({ color: 0x7a7a80 });
+    const lgrey = new THREE.MeshLambertMaterial({ color: 0x9a9aa0 });
+    const ivory = new THREE.MeshLambertMaterial({ color: 0xf0e8d0 });
+    const pink  = new THREE.MeshLambertMaterial({ color: 0xd4948a });
+    const dark  = new THREE.MeshLambertMaterial({ color: 0x1a1a1a });
+    const white = new THREE.MeshLambertMaterial({ color: 0xffffff });
 
-  const clock = new THREE.Clock();
-  renderer.setAnimationLoop(() => {
-    clock.getDelta(); // keep clock ticking (animation handled in buildElephant via rAF)
-    renderer.render(scene, camera);
-  });
-}
+    function add(geo, mat, px,py,pz, rx,ry,rz, sx,sy,sz) {
+      const m = new THREE.Mesh(geo, mat);
+      m.position.set(px||0, py||0, pz||0);
+      if (rx||ry||rz) m.rotation.set(rx,ry,rz);
+      if (sx) m.scale.set(sx,sy,sz);
+      root.add(m); return m;
+    }
 
-// ── Procedural elephant — no external assets needed ──────────────────────────
-function buildElephant() {
-  const root = new THREE.Group();
-  const grey  = new THREE.MeshLambertMaterial({ color: 0x7a7a80 });
-  const lgrey = new THREE.MeshLambertMaterial({ color: 0x9a9aa0 });
-  const ivory = new THREE.MeshLambertMaterial({ color: 0xf0e8d0 });
-  const pink  = new THREE.MeshLambertMaterial({ color: 0xd4948a });
+    // Body
+    const body = add(new THREE.SphereGeometry(0.13,20,14), grey, 0,0.13,0, 0,0,0, 1.45,1,1.15);
 
-  function mesh(geo, mat, px,py,pz, rx,ry,rz, sx,sy,sz) {
-    const m = new THREE.Mesh(geo, mat);
-    m.position.set(px,py,pz);
-    if (rx||ry||rz) m.rotation.set(rx,ry,rz);
-    if (sx) m.scale.set(sx,sy,sz);
-    return m;
+    // Neck
+    add(new THREE.CylinderGeometry(0.07,0.09,0.1,12), grey, 0.14,0.19,0, 0,0,-0.45);
+
+    // Head group
+    const headGroup = new THREE.Group();
+    headGroup.position.set(0.22,0.25,0);
+    root.add(headGroup);
+
+    headGroup.add(Object.assign(new THREE.Mesh(new THREE.SphereGeometry(0.09,16,12), grey)));
+    // forehead
+    headGroup.add(Object.assign(new THREE.Mesh(new THREE.SphereGeometry(0.055,12,10), grey), { position: new THREE.Vector3(0.04,0.06,0) }));
+
+    // Eyes + highlights
+    [-1,1].forEach(s => {
+      const eye = new THREE.Mesh(new THREE.SphereGeometry(0.013,8,8), dark);
+      eye.position.set(0.07, 0.03, s*0.072);
+      headGroup.add(eye);
+      const hl = new THREE.Mesh(new THREE.SphereGeometry(0.004,6,6), white);
+      hl.position.set(0.075, 0.036, s*0.076);
+      headGroup.add(hl);
+    });
+
+    // Ears
+    [-1,1].forEach(s => {
+      const ear = new THREE.Mesh(new THREE.SphereGeometry(0.08,12,10), lgrey);
+      ear.scale.set(0.3,1,1); ear.position.set(-0.02,0.01,s*0.11);
+      headGroup.add(ear);
+      const inner = new THREE.Mesh(new THREE.SphereGeometry(0.055,10,8), pink);
+      inner.scale.set(0.18,0.72,0.72); inner.position.set(-0.015,0.01,s*0.115);
+      headGroup.add(inner);
+    });
+
+    // Trunk (segmented)
+    const trunkGroup = new THREE.Group();
+    trunkGroup.position.set(0.1,-0.05,0);
+    headGroup.add(trunkGroup);
+    const seg1 = new THREE.Mesh(new THREE.CylinderGeometry(0.028,0.024,0.1,10), grey);
+    seg1.position.set(0,-0.05,0); trunkGroup.add(seg1);
+    const seg2 = new THREE.Mesh(new THREE.CylinderGeometry(0.022,0.018,0.09,10), grey);
+    seg2.position.set(0,-0.14,0); trunkGroup.add(seg2);
+    const seg3 = new THREE.Mesh(new THREE.CylinderGeometry(0.016,0.012,0.07,10), grey);
+    seg3.position.set(0,-0.215,0); trunkGroup.add(seg3);
+    const tip = new THREE.Mesh(new THREE.SphereGeometry(0.015,8,8), grey);
+    tip.position.set(0,-0.26,0); trunkGroup.add(tip);
+
+    // Tusks
+    [-1,1].forEach(s => {
+      const tusk = new THREE.Mesh(new THREE.CylinderGeometry(0.009,0.005,0.11,8), ivory);
+      tusk.position.set(0.08,-0.06,s*0.05);
+      tusk.rotation.z = -Math.PI/2.2;
+      headGroup.add(tusk);
+    });
+
+    // Legs
+    const legGroups = [];
+    [[-0.08,0.04,-0.08],[-0.08,0.04,0.08],[0.08,0.04,-0.08],[0.08,0.04,0.08]].forEach(([x,y,z]) => {
+      const lg = new THREE.Group();
+      lg.position.set(x,y,z);
+      lg.add(Object.assign(new THREE.Mesh(new THREE.CylinderGeometry(0.032,0.026,0.11,10), grey)));
+      const foot = new THREE.Mesh(new THREE.SphereGeometry(0.032,8,6), grey);
+      foot.scale.set(1,0.5,1.2); foot.position.set(0,-0.055,0);
+      lg.add(foot);
+      root.add(lg);
+      legGroups.push(lg);
+    });
+
+    // Tail
+    const tail = new THREE.Mesh(new THREE.CylinderGeometry(0.008,0.004,0.09,6), grey);
+    tail.position.set(-0.14,0.2,0); tail.rotation.z = Math.PI/3.5;
+    root.add(tail);
+
+    // ── Animation ──
+    let t = 0;
+    const origHX = headGroup.position.x, origHY = headGroup.position.y;
+    const origTailZ = tail.rotation.z;
+    (function tick() {
+      t += 0.016;
+      body.scale.y = 1 + Math.sin(t*0.9)*0.025;
+      body.position.y = 0.13 + Math.sin(t*0.9)*0.004;
+      headGroup.position.x = origHX + Math.sin(t*0.4)*0.008;
+      headGroup.position.y = origHY + Math.sin(t*0.9)*0.006;
+      headGroup.rotation.y = Math.sin(t*0.35)*0.12;
+      trunkGroup.rotation.x = Math.sin(t*0.7)*0.28;
+      trunkGroup.rotation.z = Math.sin(t*0.5)*0.15;
+      tail.rotation.z = origTailZ + Math.sin(t*1.1)*0.2;
+      legGroups[0].rotation.x =  Math.sin(t*0.6)*0.08;
+      legGroups[1].rotation.x = -Math.sin(t*0.6)*0.08;
+      legGroups[2].rotation.x = -Math.sin(t*0.6)*0.08;
+      legGroups[3].rotation.x =  Math.sin(t*0.6)*0.08;
+      requestAnimationFrame(tick);
+    })();
+
+    root.scale.setScalar(0.55);
+    root.position.set(0, 0.18, 0.1);
+    root.rotation.y = Math.PI * 0.1;
+    return root;
   }
-
-  // --- Body
-  const body = mesh(new THREE.SphereGeometry(0.13,20,14), grey, 0,0.14,0, 0,0,0, 1.45,1,1.15);
-  root.add(body);
-
-  // --- Neck
-  root.add(mesh(new THREE.CylinderGeometry(0.07,0.09,0.1,12), grey, 0.14,0.2,0, 0,0,-0.5));
-
-  // --- Head
-  const head = new THREE.Group();
-  head.position.set(0.22,0.25,0);
-  const headMesh = mesh(new THREE.SphereGeometry(0.09,16,12), grey, 0,0,0);
-  head.add(headMesh);
-
-  // Forehead bump
-  head.add(mesh(new THREE.SphereGeometry(0.055,12,10), grey, 0.04,0.06,0));
-
-  // Eyes
-  [-1,1].forEach(s => {
-    head.add(mesh(new THREE.SphereGeometry(0.012,8,8), new THREE.MeshLambertMaterial({color:0x1a1a1a}), 0.07,0.03,s*0.07));
-    // highlight
-    head.add(mesh(new THREE.SphereGeometry(0.004,6,6), new THREE.MeshLambertMaterial({color:0xffffff}), 0.075,0.035,s*0.078));
-  });
-
-  // Ears (large, flat-ish)
-  [-1,1].forEach(s => {
-    const ear = mesh(new THREE.SphereGeometry(0.075,12,10), lgrey, -0.02,0.01,s*0.1, 0,0,0, 0.35,1,1);
-    head.add(ear);
-    // inner ear pink
-    head.add(mesh(new THREE.SphereGeometry(0.05,10,8), pink, -0.015,0.01,s*0.105, 0,0,0, 0.2,0.7,0.7));
-  });
-
-  // Trunk (segmented for animation)
-  const trunkGroup = new THREE.Group();
-  trunkGroup.position.set(0.1,-0.05,0);
-  const seg1 = mesh(new THREE.CylinderGeometry(0.028,0.024,0.1,10), grey, 0,-0.05,0);
-  const seg2 = mesh(new THREE.CylinderGeometry(0.022,0.018,0.09,10), grey, 0,-0.14,0);
-  const seg3 = mesh(new THREE.CylinderGeometry(0.016,0.012,0.07,10), grey, 0,-0.215,0);
-  const tip  = mesh(new THREE.SphereGeometry(0.015,8,8), grey, 0,-0.26,0);
-  trunkGroup.add(seg1,seg2,seg3,tip);
-  head.add(trunkGroup);
-
-  // Tusks
-  [-1,1].forEach(s => {
-    head.add(mesh(new THREE.CylinderGeometry(0.009,0.005,0.11,8), ivory, 0.08,-0.06,s*0.05, 0,0,-Math.PI/2.2));
-  });
-
-  root.add(head);
-
-  // --- Legs
-  const legPositions = [[-0.08,0.04,-0.08],[-0.08,0.04,0.08],[0.08,0.04,-0.08],[0.08,0.04,0.08]];
-  const legs = legPositions.map(([x,y,z]) => {
-    const lg = new THREE.Group();
-    lg.position.set(x,y,z);
-    lg.add(mesh(new THREE.CylinderGeometry(0.032,0.026,0.11,10), grey, 0,0,0));
-    lg.add(mesh(new THREE.SphereGeometry(0.032,8,6), grey, 0,-0.055,0, 0,0,0, 1,0.5,1.2));
-    root.add(lg);
-    return lg;
-  });
-
-  // --- Tail
-  const tail = mesh(new THREE.CylinderGeometry(0.008,0.004,0.09,6), grey, -0.14,0.2,0, 0,0,Math.PI/3.5);
-  root.add(tail);
-
-  // ── Animation ───────────────────────────────────────────────
-  let t = 0;
-  const origHeadX = head.position.x;
-  const origHeadY = head.position.y;
-
-  function animate() {
-    t += 0.016;
-
-    // Breathing
-    body.scale.y = 1 + Math.sin(t * 0.9) * 0.025;
-    body.position.y = 0.14 + Math.sin(t * 0.9) * 0.004;
-
-    // Head gentle sway
-    head.position.x = origHeadX + Math.sin(t * 0.4) * 0.008;
-    head.position.y = origHeadY + Math.sin(t * 0.9) * 0.006;
-    head.rotation.y = Math.sin(t * 0.35) * 0.12;
-
-    // Trunk wave
-    trunkGroup.rotation.x = Math.sin(t * 0.7) * 0.25;
-    trunkGroup.rotation.z = Math.sin(t * 0.5) * 0.15;
-
-    // Tail wag
-    tail.rotation.z = Math.PI/3.5 + Math.sin(t * 1.1) * 0.2;
-
-    // Subtle leg shift (weight shift)
-    legs[0].rotation.x =  Math.sin(t * 0.6) * 0.08;
-    legs[1].rotation.x = -Math.sin(t * 0.6) * 0.08;
-    legs[2].rotation.x = -Math.sin(t * 0.6) * 0.08;
-    legs[3].rotation.x =  Math.sin(t * 0.6) * 0.08;
-
-    requestAnimationFrame(animate);
-  }
-  animate();
-
-  // Scale and position on the note (MindAR image space: ~1 unit wide)
-  root.scale.setScalar(0.55);
-  root.position.set(0, 0.15, 0.1);
-  root.rotation.y = Math.PI * 0.1;
-
-  return root;
-}
 </script>
 </body>
 </html>
