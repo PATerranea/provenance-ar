@@ -8,7 +8,7 @@
   <meta http-equiv="Pragma" content="no-cache" />
   <meta http-equiv="Expires" content="0" />
   <title>ARTIS Conservation Note — AR</title>
-  <!-- v8 -->
+  <!-- v9 -->
   <style>
     *{margin:0;padding:0;box-sizing:border-box}
     html,body{width:100%;height:100%;overflow:hidden;background:#0a1628;font-family:-apple-system,BlinkMacSystemFont,'Helvetica Neue',sans-serif}
@@ -156,7 +156,11 @@ async function startAR(){
     mar=new window.MINDAR.IMAGE.MindARThree({
       container:document.getElementById('ar-container'),
       imageTargetSrc:MIND_FILE,
-      maxTrack:1,uiLoading:'no',uiScanning:'no',uiError:'no'
+      maxTrack:1,uiLoading:'no',uiScanning:'no',uiError:'no',
+      filterMinCF: 0.0001,
+      filterBeta: 0.001,
+      warmupTolerance: 5,
+      missTolerance: 5,
     });
   } catch(e){ showErr('AR init mislukt','Probeer opnieuw.',e.message); return; }
 
@@ -191,7 +195,12 @@ async function startAR(){
 
   document.getElementById('loading').classList.remove('show');
   document.getElementById('ui').classList.add('show');
-  renderer.setAnimationLoop(function(){ renderer.render(scene,camera); });
+
+  // Animatie via MindAR's eigen loop — voorkomt conflict en trillen
+  renderer.setAnimationLoop(function(){
+    if(window._elephantTick) window._elephantTick();
+    renderer.render(scene,camera);
+  });
 }
 
 // ── Gravure-stijl olifant ─────────────────────────────────────────────────
@@ -322,45 +331,30 @@ function buildGravureElephant(){
   var trunkBase=trunk.rotation.z;
   var tailBase=0;
 
-  (function tick(){
-    t+=0.012; // iets langzamer voor waardigheid
-
-    // Rustgevende ademhaling
+  // Exporteer tick naar global zodat MindAR render loop hem aanroept
+  window._elephantTick = function(){
+    t+=0.012;
     body.scale.y=1+Math.sin(t*0.7)*0.018;
     body.position.y=0.14+Math.sin(t*0.7)*0.003;
-
-    // Hoofd lichte knik
     head.position.y=hy+Math.sin(t*0.5)*0.005;
     head.rotation.y=Math.sin(t*0.28)*0.08;
     head.rotation.z=Math.sin(t*0.4)*0.03;
-
-    // Oren waaieren licht
     earL.rotation.z=Math.sin(t*0.6)*0.06;
     earR.rotation.z=-Math.sin(t*0.6)*0.06;
-
-    // Slurf beweegt kalm
     trunk.rotation.x=Math.sin(t*0.55)*0.22;
     trunk.rotation.z=Math.sin(t*0.4)*0.1;
-
-    // Staart
     tail.rotation.z=tailBase+Math.sin(t*0.9)*0.18;
-
-    // Gewichtsverschuiving poten
     legs[0].rotation.x= Math.sin(t*0.5)*0.05;
     legs[1].rotation.x=-Math.sin(t*0.5)*0.05;
     legs[2].rotation.x=-Math.sin(t*0.5)*0.05;
     legs[3].rotation.x= Math.sin(t*0.5)*0.05;
+  };
 
-    requestAnimationFrame(tick);
-  })();
-
-  // Rechtop op het biljet, kijkend naar de camera
-  // MindAR image space: X=rechts, Y=omhoog langs note, Z=naar camera
-  // rotation.x = -90° kantelt de olifant van liggend naar staand
-  root.scale.setScalar(0.52);
-  root.position.set(0.05, 0, 0.36);
-  root.rotation.x = -Math.PI / 2;
-  root.rotation.z = Math.PI;
+  // Rechtop op het biljet, kijkend naar camera
+  root.scale.setScalar(0.48);
+  root.position.set(0, 0, 0.18);      // lager — dichter op het biljet
+  root.rotation.x = -Math.PI / 2;     // rechtop
+  root.rotation.z = 0;                // recht naar camera
   return root;
 }
 </script>
