@@ -1,0 +1,323 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no" />
+  <title>Provenance Studio — AR Experience</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    html, body { width: 100%; height: 100%; overflow: hidden; background: #0d0d0d; font-family: -apple-system, BlinkMacSystemFont, 'Helvetica Neue', sans-serif; }
+
+    #splash {
+      position: fixed; inset: 0; z-index: 100;
+      background: #0d0d0d;
+      display: flex; flex-direction: column; align-items: center; justify-content: center;
+      gap: 28px; padding: 2rem;
+      transition: opacity 0.6s ease;
+    }
+    #splash.hidden { opacity: 0; pointer-events: none; }
+    .splash-logo { font-size: 10px; letter-spacing: 3px; text-transform: uppercase; color: rgba(212,168,32,0.6); }
+    .splash-title { font-size: 26px; font-weight: 300; color: #fff; text-align: center; line-height: 1.3; letter-spacing: -0.3px; }
+    .splash-title em { font-style: normal; color: #d4a820; }
+    .splash-desc { font-size: 13px; color: rgba(255,255,255,0.4); text-align: center; line-height: 1.7; max-width: 280px; }
+    .splash-btn { background: #d4a820; color: #0d0d0d; border: none; border-radius: 6px; padding: 14px 36px; font-size: 14px; font-weight: 600; letter-spacing: 0.5px; cursor: pointer; }
+    .splash-btn:active { opacity: 0.85; transform: scale(0.97); }
+    .splash-note { font-size: 11px; color: rgba(255,255,255,0.2); text-align: center; max-width: 260px; line-height: 1.6; }
+
+    #loading {
+      position: fixed; inset: 0; z-index: 80; background: #000;
+      display: none; flex-direction: column; align-items: center; justify-content: center; gap: 16px;
+    }
+    #loading.show { display: flex; }
+    .loading-ring { width: 36px; height: 36px; border-radius: 50%; border: 2px solid rgba(212,168,32,0.2); border-top-color: #d4a820; animation: spin 0.9s linear infinite; }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    .loading-text { font-size: 12px; color: rgba(255,255,255,0.35); letter-spacing: 1px; }
+
+    #ar-container { position: fixed; inset: 0; }
+
+    #ui-overlay { position: fixed; inset: 0; z-index: 50; pointer-events: none; display: none; }
+    #ui-overlay.show { display: block; }
+
+    #aim-ring {
+      position: absolute; left: 50%; top: 50%;
+      transform: translate(-50%, -50%);
+      width: 210px; height: 105px;
+      border: 1.5px solid rgba(212,168,32,0.45); border-radius: 3px;
+      transition: border-color 0.3s, opacity 0.4s;
+    }
+    #aim-ring.found { opacity: 0; }
+    .corner { position: absolute; width: 14px; height: 14px; border-color: #d4a820; border-style: solid; }
+    .c-tl { top: -1px; left: -1px; border-width: 2px 0 0 2px; }
+    .c-tr { top: -1px; right: -1px; border-width: 2px 2px 0 0; }
+    .c-bl { bottom: -1px; left: -1px; border-width: 0 0 2px 2px; }
+    .c-br { bottom: -1px; right: -1px; border-width: 0 2px 2px 0; }
+
+    #hint {
+      position: absolute; bottom: 52px; left: 50%; transform: translateX(-50%);
+      background: rgba(0,0,0,0.55); border: 0.5px solid rgba(212,168,32,0.25);
+      border-radius: 20px; padding: 8px 20px;
+      font-size: 12px; color: rgba(255,255,255,0.6); white-space: nowrap;
+      transition: opacity 0.4s;
+    }
+    #hint.hidden { opacity: 0; }
+
+    #badge {
+      position: absolute; top: 32px; left: 50%; transform: translateX(-50%);
+      display: flex; align-items: center; gap: 8px;
+      background: rgba(0,0,0,0.5); border: 0.5px solid rgba(212,168,32,0.3);
+      border-radius: 20px; padding: 6px 16px 6px 10px;
+      opacity: 0; transition: opacity 0.5s;
+    }
+    #badge.visible { opacity: 1; }
+    .badge-dot { width: 6px; height: 6px; border-radius: 50%; background: #4caf50; animation: pdot 1.5s ease-in-out infinite; }
+    @keyframes pdot { 0%,100%{ opacity:1; } 50%{ opacity:0.3; } }
+    .badge-text { font-size: 11px; color: rgba(255,255,255,0.75); letter-spacing: 0.4px; }
+
+    #error-msg {
+      position: fixed; inset: 0; z-index: 200; background: #0d0d0d;
+      display: none; flex-direction: column; align-items: center; justify-content: center;
+      gap: 16px; padding: 2rem; text-align: center;
+    }
+    #error-msg.show { display: flex; }
+    #error-msg h2 { color: #d4a820; font-size: 18px; font-weight: 400; }
+    #error-msg p { color: rgba(255,255,255,0.45); font-size: 13px; line-height: 1.7; max-width: 300px; }
+    #error-msg button { background: transparent; border: 0.5px solid rgba(212,168,32,0.4); color: #d4a820; border-radius: 6px; padding: 10px 24px; font-size: 13px; cursor: pointer; margin-top: 8px; }
+  </style>
+</head>
+<body>
+
+<div id="splash">
+  <div class="splash-logo">Provenance Studio</div>
+  <div class="splash-title">Breng de<br><em>Signature Serie</em><br>tot leven</div>
+  <div class="splash-desc">Richt je camera op de note — een levende olifant verschijnt op het biljet.</div>
+  <button class="splash-btn" onclick="startAR()">Start AR-ervaring</button>
+  <div class="splash-note">Camera wordt gebruikt voor beeldherkenning. Er wordt niets opgeslagen of verstuurd.</div>
+</div>
+
+<div id="loading">
+  <div class="loading-ring"></div>
+  <div class="loading-text" id="load-text">Camera starten…</div>
+</div>
+
+<div id="ar-container"></div>
+
+<div id="ui-overlay">
+  <div id="aim-ring">
+    <div class="corner c-tl"></div>
+    <div class="corner c-tr"></div>
+    <div class="corner c-bl"></div>
+    <div class="corner c-br"></div>
+  </div>
+  <div id="badge">
+    <div class="badge-dot"></div>
+    <div class="badge-text">Note herkend — AR actief</div>
+  </div>
+  <div id="hint">Richt camera op de Signature Serie note</div>
+</div>
+
+<div id="error-msg">
+  <h2>Camera niet beschikbaar</h2>
+  <p id="error-detail">Geef cameratoestemming en open deze pagina via HTTPS of localhost.</p>
+  <button onclick="location.reload()">Opnieuw proberen</button>
+</div>
+
+<!-- Three.js via esm.sh (works without build tools) -->
+<script type="importmap">
+{
+  "imports": {
+    "three": "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js",
+    "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/"
+  }
+}
+</script>
+
+<script type="module">
+import * as THREE from 'three';
+import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
+
+// ── CONFIG ────────────────────────────────────────────────────────────────────
+// Replace with your compiled .mind file (https://hiukim.github.io/mind-ar-js-doc/tools/compile)
+const MIND_FILE = 'https://cdn.jsdelivr.net/npm/mind-ar@1.2.5/dist/examples/image-tracking/assets/card-example/cards.mind';
+// Replace with your hosted glTF elephant model
+const ELEPHANT_GLB = 'https://modelviewer.dev/shared-assets/models/Elephant.glb';
+// ─────────────────────────────────────────────────────────────────────────────
+
+let mindarThree, renderer, scene, camera, mixer;
+const clock = new THREE.Clock();
+
+function setLoadText(t) { document.getElementById('load-text').textContent = t; }
+function showError(msg) {
+  document.getElementById('error-detail').textContent = msg;
+  document.getElementById('error-msg').classList.add('show');
+  document.getElementById('loading').classList.remove('show');
+}
+
+window.startAR = async function() {
+  document.getElementById('splash').classList.add('hidden');
+  document.getElementById('loading').classList.add('show');
+
+  // Check camera permission early
+  try {
+    const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } });
+    stream.getTracks().forEach(t => t.stop()); // release immediately, MindAR will re-open
+  } catch(e) {
+    showError('Cameratoestemming geweigerd of niet beschikbaar. Open via HTTPS en geef toegang.');
+    return;
+  }
+
+  // Dynamically load MindAR (UMD, must load after DOM ready)
+  setLoadText('AR-bibliotheek laden…');
+  await loadScript('https://cdn.jsdelivr.net/npm/mind-ar@1.2.5/dist/mindar-image-three.prod.js');
+
+  setLoadText('Beeldherkenning initialiseren…');
+  await initAR();
+};
+
+function loadScript(src) {
+  return new Promise((resolve, reject) => {
+    const s = document.createElement('script');
+    s.src = src; s.onload = resolve; s.onerror = reject;
+    document.head.appendChild(s);
+  });
+}
+
+async function initAR() {
+  try {
+    mindarThree = new window.MINDAR.IMAGE.MindARThree({
+      container: document.getElementById('ar-container'),
+      imageTargetSrc: MIND_FILE,
+      maxTrack: 1,
+      uiLoading: 'no',
+      uiScanning: 'no',
+      uiError: 'no',
+    });
+  } catch(e) {
+    showError('AR kon niet worden geïnitialiseerd: ' + e.message);
+    return;
+  }
+
+  ({ renderer, scene, camera } = mindarThree);
+
+  // Lighting
+  scene.add(new THREE.AmbientLight(0xffffff, 0.8));
+  const sun = new THREE.DirectionalLight(0xffe0a0, 1.4);
+  sun.position.set(2, 4, 3);
+  scene.add(sun);
+  const fill = new THREE.DirectionalLight(0x8899cc, 0.5);
+  fill.position.set(-3, 1, -2);
+  scene.add(fill);
+
+  const anchor = mindarThree.addAnchor(0);
+
+  // Load elephant
+  setLoadText('Olifant laden…');
+  const elephant = await loadElephant(anchor);
+
+  // Events
+  anchor.onTargetFound = () => {
+    document.getElementById('aim-ring').classList.add('found');
+    document.getElementById('badge').classList.add('visible');
+    document.getElementById('hint').classList.add('hidden');
+  };
+  anchor.onTargetLost = () => {
+    document.getElementById('aim-ring').classList.remove('found');
+    document.getElementById('badge').classList.remove('visible');
+    document.getElementById('hint').classList.remove('hidden');
+  };
+
+  // Start MindAR
+  try {
+    setLoadText('Camera koppelen…');
+    await mindarThree.start();
+  } catch(e) {
+    showError('Camera kon niet worden gestart: ' + e.message);
+    return;
+  }
+
+  document.getElementById('loading').classList.remove('show');
+  document.getElementById('ui-overlay').classList.add('show');
+
+  // Render loop
+  renderer.setAnimationLoop(() => {
+    const delta = clock.getDelta();
+    if (mixer) mixer.update(delta);
+    renderer.render(scene, camera);
+  });
+}
+
+async function loadElephant(anchor) {
+  return new Promise((resolve) => {
+    const loader = new GLTFLoader();
+    loader.load(
+      ELEPHANT_GLB,
+      (gltf) => {
+        const model = gltf.scene;
+        model.scale.setScalar(0.10);
+        model.position.set(0, 0.05, 0.12);
+        model.rotation.y = Math.PI * 0.15;
+        anchor.group.add(model);
+
+        if (gltf.animations?.length) {
+          mixer = new THREE.AnimationMixer(model);
+          mixer.clipAction(gltf.animations[0]).play();
+        }
+        resolve(model);
+      },
+      (p) => { if (p.total) setLoadText(`Model laden… ${Math.round(p.loaded/p.total*100)}%`); },
+      (_err) => {
+        // Fallback procedural elephant
+        const group = buildFallbackElephant();
+        anchor.group.add(group);
+        resolve(group);
+      }
+    );
+  });
+}
+
+function buildFallbackElephant() {
+  const g = new THREE.Group();
+  const grey = new THREE.MeshLambertMaterial({ color: 0x808080 });
+  const ivory = new THREE.MeshLambertMaterial({ color: 0xf5f0e0 });
+
+  const add = (geo, mat, x, y, z, rx=0, ry=0, rz=0, sx=1, sy=1, sz=1) => {
+    const m = new THREE.Mesh(geo, mat);
+    m.position.set(x,y,z); m.rotation.set(rx,ry,rz); m.scale.set(sx,sy,sz);
+    g.add(m); return m;
+  };
+
+  // Body
+  const body = add(new THREE.SphereGeometry(0.12,16,12), grey, 0,0.13,0, 0,0,0, 1.4,1,1.1);
+  // Head
+  add(new THREE.SphereGeometry(0.08,16,12), grey, 0.17,0.21,0);
+  // Trunk (hanging down, wiggles)
+  const trunk = add(new THREE.CylinderGeometry(0.024,0.016,0.14,8), grey, 0.25,0.13,0, 0,0,-Math.PI/3);
+  // Ears
+  add(new THREE.SphereGeometry(0.065,8,8), grey, 0.14,0.23, 0.1, 0,0,0, 0.3,0.9,0.9);
+  add(new THREE.SphereGeometry(0.065,8,8), grey, 0.14,0.23,-0.1, 0,0,0, 0.3,0.9,0.9);
+  // Legs
+  [[-0.06,0.05,-0.07],[-0.06,0.05,0.07],[0.07,0.05,-0.07],[0.07,0.05,0.07]].forEach(([x,y,z]) =>
+    add(new THREE.CylinderGeometry(0.03,0.025,0.1,8), grey, x,y,z));
+  // Tusks
+  [-1,1].forEach(s => add(new THREE.CylinderGeometry(0.009,0.004,0.09,6), ivory, 0.22,0.17,s*0.04, 0,0,-Math.PI/2.4));
+  // Tail
+  add(new THREE.CylinderGeometry(0.008,0.004,0.07,6), grey, -0.16,0.18,0, 0,0,Math.PI/4);
+
+  // Breathing + trunk animation
+  let t = 0;
+  const origTrunkZ = trunk.rotation.z;
+  function tick() {
+    t += 0.018;
+    body.scale.y = 1 + Math.sin(t) * 0.022;
+    body.position.y = 0.13 + Math.sin(t) * 0.003;
+    trunk.rotation.z = origTrunkZ + Math.sin(t * 0.8) * 0.18;
+    requestAnimationFrame(tick);
+  }
+  tick();
+
+  g.scale.setScalar(1.6);
+  g.position.set(0, 0, 0.08);
+  return g;
+}
+</script>
+</body>
+</html>
