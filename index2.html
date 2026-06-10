@@ -8,7 +8,7 @@
   <meta http-equiv="Pragma" content="no-cache" />
   <meta http-equiv="Expires" content="0" />
   <title>ARTIS Conservation Note — AR</title>
-  <!-- v11 -->
+  <!-- v13 -->
   <style>
     *{margin:0;padding:0;box-sizing:border-box}
     html,body{width:100%;height:100%;overflow:hidden;background:#0a1628;font-family:-apple-system,BlinkMacSystemFont,'Helvetica Neue',sans-serif}
@@ -363,13 +363,11 @@ function buildGravureElephant(){
     legs[3].rotation.x= Math.sin(t*0.7)*0.08;
   };
 
-  // Op zijn rug van boven gezien:
-  // q1 zet hem rechtop (Y→Z), maar buik wijst naar camera
-  // q2 draait 180° om X zodat poten omlaag komen en rug naar boven
+  // Rechtop (X+90°) + 55° naar camera toe draaien (Z-as)
   var q1 = new THREE.Quaternion();
-  q1.setFromAxisAngle(new THREE.Vector3(1,0,0), -Math.PI/2);
+  q1.setFromAxisAngle(new THREE.Vector3(1,0,0), Math.PI/2);
   var q2 = new THREE.Quaternion();
-  q2.setFromAxisAngle(new THREE.Vector3(1,0,0), Math.PI);
+  q2.setFromAxisAngle(new THREE.Vector3(0,0,1), -Math.PI * 55/180);
   root.quaternion.multiplyQuaternions(q2, q1);
 
   root.scale.setScalar(0.48);
