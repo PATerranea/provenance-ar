@@ -8,7 +8,7 @@
   <meta http-equiv="Pragma" content="no-cache" />
   <meta http-equiv="Expires" content="0" />
   <title>ARTIS Conservation Note — AR</title>
-  <!-- v7 -->
+  <!-- v8 -->
   <style>
     *{margin:0;padding:0;box-sizing:border-box}
     html,body{width:100%;height:100%;overflow:hidden;background:#0a1628;font-family:-apple-system,BlinkMacSystemFont,'Helvetica Neue',sans-serif}
@@ -354,10 +354,13 @@ function buildGravureElephant(){
     requestAnimationFrame(tick);
   })();
 
-  // Positie op het biljet
-  root.scale.setScalar(0.58);
-  root.position.set(0, 0.22, 0.05);
-  root.rotation.y=Math.PI*0.08;
+  // Rechtop op het biljet, kijkend naar de camera
+  // MindAR image space: X=rechts, Y=omhoog langs note, Z=naar camera
+  // rotation.x = -90° kantelt de olifant van liggend naar staand
+  root.scale.setScalar(0.52);
+  root.position.set(0.05, 0, 0.36);
+  root.rotation.x = -Math.PI / 2;
+  root.rotation.z = Math.PI;
   return root;
 }
 </script>
