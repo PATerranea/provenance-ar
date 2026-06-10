@@ -8,7 +8,7 @@
   <meta http-equiv="Pragma" content="no-cache" />
   <meta http-equiv="Expires" content="0" />
   <title>ARTIS Conservation Note — AR</title>
-  <!-- v10 -->
+  <!-- v11 -->
   <style>
     *{margin:0;padding:0;box-sizing:border-box}
     html,body{width:100%;height:100%;overflow:hidden;background:#0a1628;font-family:-apple-system,BlinkMacSystemFont,'Helvetica Neue',sans-serif}
@@ -121,7 +121,19 @@ function loadScript(src){
   });
 }
 
-document.getElementById('start-btn').onclick = function(){ startAR(); };
+document.getElementById('start-btn').onclick = function(){
+  // iOS AudioContext moet aangemaakt worden binnen user gesture
+  try {
+    _audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    // Speel een stil geluidje om iOS te unlocken
+    var buf = _audioCtx.createBuffer(1,1,22050);
+    var src = _audioCtx.createBufferSource();
+    src.buffer = buf;
+    src.connect(_audioCtx.destination);
+    src.start(0);
+  } catch(e){}
+  startAR();
+};
 
 async function startAR(){
   document.getElementById('splash').classList.add('hidden');
@@ -351,13 +363,17 @@ function buildGravureElephant(){
     legs[3].rotation.x= Math.sin(t*0.7)*0.08;
   };
 
-  // Rechtop staand op biljet, kijkend naar camera
-  // MindAR: biljet ligt plat, Z-as wijst omhoog naar camera
-  // Olifant staat normaal langs Y-as — dus Y omhoog = Z in MindAR space
+  // Op zijn rug van boven gezien:
+  // q1 zet hem rechtop (Y→Z), maar buik wijst naar camera
+  // q2 draait 180° om X zodat poten omlaag komen en rug naar boven
+  var q1 = new THREE.Quaternion();
+  q1.setFromAxisAngle(new THREE.Vector3(1,0,0), -Math.PI/2);
+  var q2 = new THREE.Quaternion();
+  q2.setFromAxisAngle(new THREE.Vector3(1,0,0), Math.PI);
+  root.quaternion.multiplyQuaternions(q2, q1);
+
   root.scale.setScalar(0.48);
-  root.position.set(0, 0, 0.22);  // hoogte boven biljet
-  root.rotation.x = -Math.PI / 2; // plat → rechtop
-  root.rotation.y = Math.PI;      // naar camera toe draaien
+  root.position.set(0, 0, 0.20);
   return root;
 }// ── Olifant trompetgeluid via Web Audio API ───────────────────────────────────
 var _audioCtx = null;
